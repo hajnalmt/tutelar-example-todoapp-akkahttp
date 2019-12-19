@@ -1,0 +1,41 @@
+version: '3'
+services:
+  todobackend:
+    build: .
+    environment:
+      DB_URL: "jdbc:postgresql://postgres:5432/postgres"
+      DB_USER: "postgres"
+      DB_PASSWORD: "postgres"
+      JWT_PUBLIC_KEY: "secret"
+      DB_FORCEMIGRATION: "true"
+    depends_on:
+      - postgres
+  tutelar:
+    image: teamwanari/tutelar
+    environment:
+      DATABASE_TYPE: "postgres"
+      POSTGRES_URL: "jdbc:postgresql://postgres:5432/postgres?user=postgres&password=postgres"
+      MODULES_ENABLED: "basic"
+      JWT_SECRET: "secret"
+      TRACER_CLIENT: "off"
+    depends_on:
+      - postgres
+  postgres:
+    image: postgres:12.1
+    environment:
+      POSTGRES_PASSWORD: "postgres"
+    ports:
+      - 5432:5432
+    volumes:
+      - ./scripts/psql/psql.sql:/docker-entrypoint-initdb.d/database.sql:ro
+  nginx:
+    image: nginx:stable-alpine
+    volumes:
+      - ./scripts/nginx/proxy.conf:/etc/nginx/conf.d/default.conf
+      - ./scripts/nginx/cert.key:/etc/nginx/ssl/cert.key
+      - ./scripts/nginx/cert.pem:/etc/nginx/ssl/cert.pem
+    ports:
+      - 9443:9443
+    depends_on:
+      - todobackend
+      - tutelar

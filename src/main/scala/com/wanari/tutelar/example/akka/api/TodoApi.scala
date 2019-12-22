@@ -3,7 +3,7 @@ package com.wanari.tutelar.example.akka.api
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.PathMatchers.LongNumber
 import com.wanari.tutelar.example.akka.api.HealthCheckApi.HealthCheckDto
-import com.wanari.tutelar.example.akka.api.TodoApi.{TodoDto, TodoListDto}
+import com.wanari.tutelar.example.akka.api.TodoApi.{SavedTodoDto, TodoDto}
 import com.wanari.tutelar.example.akka.repo.TodoRepository
 import com.wanari.tutelar.example.akka.repo.TodoRepository.TodoDbo
 import com.wanari.tutelar.example.akka.utils.Config.JwtConfig
@@ -21,6 +21,7 @@ class TodoApi(
 
   implicit val logger: Logger = LoggerFactory.getLogger(classOf[TodoApi])
 
+  import spray.json.DefaultJsonProtocol._
   import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
   import com.wanari.tutelar.example.akka.utils.Errors._
 
@@ -28,7 +29,7 @@ class TodoApi(
 
   def list = (get & path("todo")) {
     authenticatedWithPayload { user =>
-      todoRepository.listByUser(user.id).map(TodoListDto.fromDbo).toErrorOr.toComplete
+      todoRepository.listByUser(user.id).map(SavedTodoDto.listFromDbo).toErrorOr.toComplete
     }
   }
 
@@ -60,15 +61,13 @@ class TodoApi(
 object TodoApi {
   import spray.json.DefaultJsonProtocol._
   implicit val todoDtoFormat: RootJsonFormat[TodoDto] = jsonFormat2(TodoDto)
-  implicit val savedTodoDtoFormat: RootJsonFormat[SavedTodoDto] = jsonFormat3(SavedTodoDto)
-  implicit val todoListDtoFormat: RootJsonFormat[TodoListDto] = jsonFormat1(TodoListDto.apply)
+  implicit val savedTodoDtoFormat: RootJsonFormat[SavedTodoDto] = jsonFormat3(SavedTodoDto.apply)
 
   case class TodoDto(title: String, done: Boolean)
   case class SavedTodoDto(id: Long, title: String, done: Boolean)
-  case class TodoListDto(todos: Seq[SavedTodoDto])
-  object TodoListDto {
-    def fromDbo(todos: Seq[TodoDbo]): TodoListDto = {
-      TodoListDto(todos.map(t => SavedTodoDto(t.id, t.title, t.done)))
+  object SavedTodoDto {
+    def listFromDbo(todos: Seq[TodoDbo]): Seq[SavedTodoDto] = {
+      todos.map(t => SavedTodoDto(t.id, t.title, t.done))
     }
   }
 }
